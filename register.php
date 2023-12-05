@@ -1,6 +1,14 @@
 <?php
 
-include 'config.php';
+include 'components/connect.php';
+
+session_start(); //like the memory to store data and the users id who logged in
+
+if(isset($_SESSION['user_id'])){     //to check if the user id id found or stored in the session 
+   $user_id = $_SESSION['user_id'];  //if the user id exist show me that 
+}else{
+   $user_id = ''; //empty (the id is not exist you should to login)
+};
 
 if(isset($_POST['submit'])){
 
@@ -8,39 +16,32 @@ if(isset($_POST['submit'])){
    $name = filter_var($name, FILTER_SANITIZE_STRING);
    $email = $_POST['email'];
    $email = filter_var($email, FILTER_SANITIZE_STRING);
-   $pass = md5($_POST['pass']);
+   $number = $_POST['number'];
+   $number = filter_var($number, FILTER_SANITIZE_STRING);
+   $pass = sha1($_POST['pass']);
    $pass = filter_var($pass, FILTER_SANITIZE_STRING);
-   $cpass = md5($_POST['cpass']);
+   $cpass = sha1($_POST['cpass']);
    $cpass = filter_var($cpass, FILTER_SANITIZE_STRING);
 
-   $image = $_FILES['image']['name'];
-   $image = filter_var($image, FILTER_SANITIZE_STRING);
-   $image_size = $_FILES['image']['size'];
-   $image_tmp_name = $_FILES['image']['tmp_name'];
-   $image_folder = 'uploaded_img/'.$image;
+   $select_user = $conn->prepare("SELECT * FROM `users` WHERE email = ? OR number = ?");
+   $select_user->execute([$email, $number]);
+   $row = $select_user->fetch(PDO::FETCH_ASSOC);
 
-   $select = $conn->prepare("SELECT * FROM `users` WHERE email = ?");
-   $select->execute([$email]);
-
-   if($select->rowCount() > 0){
-      $message[] = 'user email already exist!';
+   if($select_user->rowCount() > 0){
+      $message[] = 'email or number already exists!';
    }else{
       if($pass != $cpass){
          $message[] = 'confirm password not matched!';
-      }else{
-         $insert = $conn->prepare("INSERT INTO `users`(name, email, password, image) VALUES(?,?,?,?)");
-         $insert->execute([$name, $email, $pass, $image]);
-
-         if($insert){
-            if($image_size > 2000000){
-               $message[] = 'image size is too large!';
-            }else{
-               move_uploaded_file($image_tmp_name, $image_folder);
-               $message[] = 'registered successfully!';
-               header('location:login.php');
-            }
+      }else{//new register
+         $insert_user = $conn->prepare("INSERT INTO `users`(name, email, number, password) VALUES(?,?,?,?)");
+         $insert_user->execute([$name, $email, $number, $cpass]);
+         $select_user = $conn->prepare("SELECT * FROM `users` WHERE email = ? AND password = ?");//login 
+         $select_user->execute([$email, $pass]);
+         $row = $select_user->fetch(PDO::FETCH_ASSOC); //يخزن ال user id بال session
+         if($select_user->rowCount() > 0){
+            $_SESSION['user_id'] = $row['id'];// after register and login the user id is already stored in session so it will go to home page
+            header('location:home.php');
          }
-
       }
    }
 
@@ -60,41 +61,71 @@ if(isset($_POST['submit'])){
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
 
    <!-- custom css file link  -->
-   <link rel="stylesheet" href="css/components.css">
+   <link rel="stylesheet" href="css/style.css">
 
 </head>
 <body>
-
-<?php
-
-if(isset($message)){
-   foreach($message as $message){
-      echo '
-      <div class="message">
-         <span>'.$message.'</span>
-         <i class="fas fa-times" onclick="this.parentElement.remove();"></i>
-      </div>
-      ';
-   }
-}
-
-?>
    
-<section class="form-container">
+<!-- header section starts  -->
+<?php include 'components/user_header.php'; ?>
+<!-- header section ends -->
 
-   <form action="" enctype="multipart/form-data" method="POST">
+<!-- <section class="form-container">
+
+   <form action="" method="post">
       <h3>register now</h3>
-      <input type="text" name="name" class="box" placeholder="enter your name" required>
-      <input type="email" name="email" class="box" placeholder="enter your email" required>
-      <input type="password" name="pass" class="box" placeholder="enter your password" required>
-      <input type="password" name="cpass" class="box" placeholder="confirm your password" required>
-      <input type="file" name="image" class="box" required accept="image/jpg, image/jpeg, image/png">
-      <input type="submit" value="register now" class="btn" name="submit">
+      <input type="text" name="name" required placeholder="enter your name" class="box" maxlength="50">
+      <input type="email" name="email" required placeholder="enter your email" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+      <input type="number" name="number" required placeholder="enter your number" class="box" min="0" max="9999999999" maxlength="10">
+      <input type="password" name="pass" required placeholder="enter your password" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+      <input type="password" name="cpass" required placeholder="confirm your password" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+      <input type="submit" value="register now" name="submit" class="btn">
       <p>already have an account? <a href="login.php">login now</a></p>
    </form>
 
-</section>
+</section> -->
 
+
+
+
+<section class="contact">
+
+   <div class="row">
+
+      <div class="image">
+         <img src="images/register.jpg" alt="">
+      </div>
+
+      <form action="" method="post">
+      <h3>register now</h3>
+      <input type="text" name="name" required placeholder="enter your name" class="box" maxlength="50">
+      <input type="email" name="email" required placeholder="enter your email" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+      <input type="number" name="number" required placeholder="enter your number" class="box" min="0" max="9999999999" maxlength="10">
+      <input type="password" name="pass" required placeholder="enter your password" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+      <input type="password" name="cpass" required placeholder="confirm your password" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+      <input type="submit" value="register now" name="submit" class="btn"><br><br>
+      <h2>already have an account? <a href="login.php">login now</a></h2>
+   </form>
+
+   </div>
+
+</section>
+<hr>
+
+
+
+
+
+<?php include 'components/footer.php'; ?>
+
+
+
+
+
+
+
+<!-- custom js file link  -->
+<script src="js/script.js"></script>
 
 </body>
 </html>

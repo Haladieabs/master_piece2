@@ -1,41 +1,31 @@
 <?php
 
-@include 'config.php';
+include 'components/connect.php';
 
-session_start();
+session_start(); //in every pages  store the user id 
+
+if(isset($_SESSION['user_id'])){
+   $user_id = $_SESSION['user_id'];
+}else{
+   $user_id = '';
+};
 
 if(isset($_POST['submit'])){
 
    $email = $_POST['email'];
    $email = filter_var($email, FILTER_SANITIZE_STRING);
-   $pass = md5($_POST['pass']);
+   $pass = sha1($_POST['pass']);  //sha1  لحتى تشفر  على database
    $pass = filter_var($pass, FILTER_SANITIZE_STRING);
 
-   $sql = "SELECT * FROM `users` WHERE email = ? AND password = ?";
-   $stmt = $conn->prepare($sql);
-   $stmt->execute([$email, $pass]);
-   $rowCount = $stmt->rowCount();  
+   $select_user = $conn->prepare("SELECT * FROM `users` WHERE email = ? AND password = ?");
+   $select_user->execute([$email, $pass]);
+   $row = $select_user->fetch(PDO::FETCH_ASSOC);   //to check in every row for the user id and email and password
 
-   $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-   if($rowCount > 0){
-
-      if($row['user_type'] == 'admin'){
-
-         $_SESSION['admin_id'] = $row['id'];
-         header('location:admin_page.php');
-
-      }elseif($row['user_type'] == 'user'){
-
-         $_SESSION['user_id'] = $row['id'];
-         header('location:home.php');
-
-      }else{
-         $message[] = 'no user found!';
-      }
-
+   if($select_user->rowCount() > 0){
+      $_SESSION['user_id'] = $row['id'];   //$_session => is to catch the id that saved (if it existed)
+      header('location:home.php');
    }else{
-      $message[] = 'incorrect email or password!';
+      $message[] = 'incorrect username or password!';
    }
 
 }
@@ -54,38 +44,70 @@ if(isset($_POST['submit'])){
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
 
    <!-- custom css file link  -->
-   <link rel="stylesheet" href="css/components.css">
+   <link rel="stylesheet" href="css/style.css">
 
 </head>
 <body>
-
-<?php
-
-if(isset($message)){
-   foreach($message as $message){
-      echo '
-      <div class="message">
-         <span>'.$message.'</span>
-         <i class="fas fa-times" onclick="this.parentElement.remove();"></i>
-      </div>
-      ';
-   }
-}
-
-?>
    
-<section class="form-container">
+<!-- header section starts  -->
+<?php include 'components/user_header.php'; ?>
+<!-- header section ends -->
 
-   <form action="" method="POST">
-      <h3>login now</h3>
-      <input type="email" name="email" class="box" placeholder="enter your email" required>
-      <input type="password" name="pass" class="box" placeholder="enter your password" required>
-      <input type="submit" value="login now" class="btn" name="submit">
-      <p>don't have an account? <a href="register.php">register now</a></p>
-   </form>
+<!-- <section class="form-container">
+<div class="row">
+
+
+
+    <form action="" method="post">
+        <h3>login now</h3>
+        <input type="email" name="email" required placeholder="enter your email" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+        <input type="password" name="pass" required placeholder="enter your password" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+        <input type="submit" value="login now" name="submit" class="btn">
+        <p>don't have an account? <a href="register.php">register now</a></p>
+    </form>
+    </div>
+
+</section> -->
+
+
+
+
+
+
+
+      
+
+   
+
+   <section class="contact">
+
+<div class="row">
+
+   <div class="image">
+      <img src="images/login.jpg" alt="">
+   </div>
+
+   <form action="" method="post">
+        <h3>login now</h3>
+        <input type="email" name="email" required placeholder="enter your email" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+        <input type="password" name="pass" required placeholder="enter your password" class="box" maxlength="50" oninput="this.value = this.value.replace(/\s/g, '')">
+        <input type="submit" value="login now" name="submit" class="btn"><br><br>
+        <h2>don't have an account? <a href="register.php">register now</a></h2>
+    </form>
+
+</div>
 
 </section>
 
+<?php include 'components/footer.php'; ?>
+
+
+
+
+
+
+<!-- custom js file link  -->
+<script src="js/script.js"></script>
 
 </body>
 </html>
